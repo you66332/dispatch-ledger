@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>派車記帳系統</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei",sans-serif;background:#f5f5f5;color:#1a1a1a;font-size:15px;display:flex;justify-content:center;}
+  .app{max-width:720px;width:100%;margin:0 auto;padding:16px;}
+  h1{font-size:20px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab{padding:8px 16px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:13px;color:#666;}
+  .tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;font-weight:500;}
+  .section{display:none;}.section.active{display:block;}
+  .card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:16px;margin-bottom:12px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .form-row.full{grid-template-columns:1fr;}
+  .form-row.three{grid-template-columns:1fr 1fr 1fr;}
+  .form-row.four{grid-template-columns:1fr 1fr 1fr 1fr;}
+  @media(max-width:500px){.form-row,.form-row.three,.form-row.four{grid-template-columns:1fr 1fr;}}
+  @media(max-width:360px){.form-row,.form-row.three,.form-row.four{grid-template-columns:1fr;}}
+  label{display:block;font-size:12px;color:#666;margin-bottom:3px;}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:#666;}
+  textarea{resize:vertical;min-height:64px;}
+  .btn{padding:9px 18px;border-radius:8px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:13px;color:#1a1a1a;font-weight:500;}
+  .btn:active{opacity:.8;}
+  .btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+  .btn-danger{color:#dc2626;border-color:#fca5a5;}
+  .btn-info{color:#2563eb;border-color:#93c5fd;}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;}
+  .badge-pending{background:#fef3c7;color:#92400e;}
+  .badge-transferred{background:#dbeafe;color:#1e40af;}
+  .badge-done{background:#d1fae5;color:#065f46;}
+  .badge-inv{background:#ede9fe;color:#5b21b6;}
+  .order-row{border:1px solid #e5e5e5;border-radius:10px;padding:12px;margin-bottom:8px;background:#fff;}
+  .order-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;flex-wrap:wrap;}
+  .order-meta{font-size:12px;color:#666;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px;}
+  .order-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;}
+  .metric{background:#f9f9f9;border-radius:8px;padding:14px;}
+  .metric-label{font-size:11px;color:#888;margin-bottom:3px;}
+  .metric-val{font-size:20px;font-weight:600;}
+  hr.div{border:none;border-top:1px solid #f0f0f0;margin:14px 0;}
+  .sec-title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .total-line{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f5f5f5;}
+  .total-line:last-child{border-bottom:none;}
+  .total-line.grand{font-weight:600;font-size:15px;border-top:1px solid #ddd;border-bottom:none;padding-top:10px;margin-top:4px;}
+  .filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .filter-bar input,.filter-bar select{width:auto;flex:1;min-width:100px;}
+  .info-box{background:#eff6ff;border-radius:8px;padding:10px 12px;font-size:12px;color:#1d4ed8;margin-bottom:12px;}
+  .warn-box{background:#fffbeb;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:12px;}
+  .preview-block{background:#f9f9f9;border-radius:8px;padding:12px;margin-bottom:12px;}
+  .preview-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;}
+  .preview-row:last-child{border-bottom:none;}
+  .preview-key{min-width:120px;color:#888;font-size:12px;flex-shrink:0;}
+  .preview-val{color:#1a1a1a;word-break:break-all;font-size:13px;}
+  .preview-val.empty{color:#bbb;font-style:italic;}
+  .status-bar{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:8px 12px;font-size:12px;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot-green{background:#22c55e;}
+  .dot-yellow{background:#f59e0b;}
+  .dot-red{background:#ef4444;}
+  .empty-state{text-align:center;padding:2.5rem;color:#999;font-size:14px;}
+  .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;padding:20px;}
+  .login-screen h2{font-size:18px;margin-bottom:8px;}
+  .login-screen p{color:#888;font-size:13px;margin-bottom:20px;}
+  .google-btn{display:flex;align-items:center;gap:10px;padding:10px 24px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:500;color:#1a1a1a;}
+  .google-btn:active{opacity:.8;}
+  .user-bar{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;}
+  .user-bar img{width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:6px;}
+  .quick-fill{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .quick-btn{padding:8px 14px;border-radius:8px;border:1px solid #d1d5db;background:#f9fafb;cursor:pointer;font-size:12px;font-weight:500;color:#374151;}
+  .quick-btn:active{opacity:.8;}
+</style>
+</head>
+<body>
+
+<div id="login-view" class="app">
+  <div class="login-screen">
+    <h1 style="margin-bottom:4px;">🚛 派車記帳系統</h1>
+    <p>請使用 Google 帳號登入以存取資料</p>
+    <button class="google-btn" id="google-login-btn">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+      使用 Google 登入
+    </button>
+  </div>
+</div>
+
+<div class="app" id="main-view" style="display:none;">
+  <h1>🚛 派車記帳系統</h1>
+
+  <div class="user-bar">
+    <span id="user-info"></span>
+    <button class="btn btn-sm" id="logout-btn">登出</button>
+  </div>
+
+  <div id="sync-status" class="status-bar">
+    <span class="dot dot-yellow"></span>
+    <span id="sync-msg">連線中...</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('parse',this)">📲 LINE 匯入</button>
+    <button class="tab" onclick="switchTab('add',this)">＋ 新增訂單</button>
+    <button class="tab" onclick="switchTab('list',this)">📋 訂單列表</button>
+    <button class="tab" onclick="switchTab('report',this)">📊 月結報表</button>
+  </div>
+
+  <!-- LINE 匯入 -->
+  <div id="tab-parse" class="section active">
+    <div class="card">
+      <div class="sec-title">📲 貼上客人回傳的 LINE 訂單</div>
+      <div class="info-box">將客人填寫完整的表單訊息複製貼入，系統會自動辨識所有欄位，解析後可預覽確認再填入訂單。</div>
+      <div style="margin-bottom:12px;">
+        <label>LINE 訊息（請貼入客人回傳的完整訂單）</label>
+        <textarea id="line-text" style="min-height:180px;font-size:12px;" placeholder="請填寫以下資訊並完成轉帳後派車收件，謝謝
+-------------------------------
+我們去收件地址:
+姓名:
+電話:
+..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-primary" onclick="parseLine()">✨ 解析訂單</button>
+        <button class="btn" onclick="document.getElementById('line-text').value='';document.getElementById('parse-preview').style.display='none';">清除</button>
+      </div>
+      <div id="parse-preview" style="display:none;">
+        <div class="sec-title" style="font-size:12px;margin-bottom:8px;">👁 解析結果預覽</div>
+        <div class="preview-block" id="preview-content"></div>
+        <div id="parse-warn" style="display:none;" class="warn-box"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn btn-primary" onclick="applyParsed()">✅ 確認填入，前往編輯</button>
+          <button class="btn" onclick="document.getElementById('parse-preview').style.display='none'">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增訂單 -->
+  <div id="tab-add" class="section">
+    <div class="card">
+      <div class="sec-title">⚡ 常用客戶一鍵帶入</div>
+      <div class="quick-fill">
+        <button class="quick-btn" onclick="quickFill('hb_zh_to_kh')">華邦電（竹北→高雄）</button>
+        <button class="quick-btn" onclick="quickFill('hb_kh_to_zh')">華邦電（高雄→竹北）</button>
+        <button class="quick-btn" onclick="quickFill('hy_doan')">華宇藥品朵恩</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="form-row">
+        <div><label>訂單日期</label><input type="date" id="f-date"></div>
+        <div><label>訂單編號（選填）</label><input type="text" id="f-no" placeholder="留空自動產生"></div>
+      </div>
+
+      <hr class="div">
+      <div class="sec-title">📍 收件資訊</div>
+      <div class="form-row full"><div><label>收件地址（起點）</label><input type="text" id="f-from" placeholder="我們去收件的地址"></div></div>
+      <div class="form-row">
+        <div><label>寄件人姓名</label><input type="text" id="f-sender" placeholder="姓名"></div>
+        <div><label>寄件人電話</label><input type="text" id="f-sender-tel" placeholder="0912-345-678"></div>
+      </div>
+
+      <hr class="div">
+      <div class="sec-title">📍 送件資訊</div>
+      <div class="form-row full"><div><label>送件地址（迄點）</label><input type="text" id="f-to" placeholder="我們送件到達的地址"></div></div>
+      <div class="form-row">
+        <div><label>收件人姓名</label><input type="text" id="f-receiver" placeholder="姓名"></div>
+        <div><label>收件人電話</label><input type="text" id="f-receiver-tel" placeholder="0912-345-678"></div>
+      </div>
+
+      <hr class="div">
+      <div class="sec-title">📦 物品與付款</div>
+      <div class="form-row full"><div><label>物品內容</label><textarea id="f-items" placeholder="客人填寫的物品內容"></textarea></div></div>
+      <div class="form-row">
+        <div><label>轉帳帳號後四碼</label><input type="text" id="f-transfer" placeholder="用於核對轉帳" maxlength="4"></div>
+        <div><label>付款狀態</label>
+          <select id="f-status">
+            <option value="pending">待確認</option>
+            <option value="transferred">已轉帳（核對中）</option>
+            <option value="done">已收款</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="div">
+      <div class="sec-title">💰 費用明細</div>
+      <div class="form-row four">
+        <div><label>配送金額（元）</label><input type="number" id="f-fee" placeholder="0" min="0" oninput="calcTotal()"></div>
+        <div><label>起點運費（元）</label><input type="number" id="f-fee-from" placeholder="0" min="0" oninput="calcTotal()"></div>
+        <div><label>中轉站運費（元）</label><input type="number" id="f-fee-via" placeholder="0" min="0" oninput="calcTotal()"></div>
+        <div><label>迄點運費（元）</label><input type="number" id="f-fee-to" placeholder="0" min="0" oninput="calcTotal()"></div>
+      </div>
+      <div id="extra-costs"></div>
+      <button class="btn btn-sm" style="margin-bottom:10px;" onclick="addExtraCost()">＋ 加入其他費用</button>
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f0f0f0;">
+        <span style="font-size:13px;color:#888;">合計</span>
+        <span style="font-size:20px;font-weight:700;" id="total-display">NT$0</span>
+      </div>
+
+      <hr class="div">
+      <div class="sec-title">🧾 發票資料（選填）</div>
+      <div class="form-row">
+        <div><label>發票統編</label><input type="text" id="f-taxid" placeholder="如不需要可留空" maxlength="8"></div>
+        <div><label>發票抬頭</label><input type="text" id="f-inv-name" placeholder="公司或個人名稱"></div>
+      </div>
+      <div class="form-row">
+        <div><label>發票收件人</label><input type="text" id="f-inv-person" placeholder="姓名"></div>
+        <div><label>發票地址</label><input type="text" id="f-inv-addr" placeholder="寄送地址"></div>
+      </div>
+
+      <hr class="div">
+      <div class="form-row full"><div><label>備註</label><input type="text" id="f-note" placeholder="內部備註"></div></div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="saveOrder()">💾 儲存訂單</button>
+        <button class="btn" onclick="clearForm()">清除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 訂單列表 -->
+  <div id="tab-list" class="section">
+    <div class="filter-bar">
+      <input type="text" id="search" placeholder="搜尋地點、姓名、品項…" oninput="renderList()">
+      <select id="filter-status" onchange="renderList()">
+        <option value="">全部狀態</option>
+        <option value="pending">待確認</option>
+        <option value="transferred">已轉帳</option>
+        <option value="done">已收款</option>
+      </select>
+      <select id="filter-month" onchange="renderList()">
+        <option value="">全部月份</option>
+      </select>
+      <button class="btn btn-sm btn-info" onclick="exportCSV()">⬇ 匯出 CSV</button>
+    </div>
+    <div id="order-list"></div>
+  </div>
+
+  <!-- 月結報表 -->
+  <div id="tab-report" class="section">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+      <label style="font-size:13px;color:#666;display:inline;margin:0;">月份：</label>
+      <select id="report-month" onchange="renderReport()" style="width:auto;"></select>
+      <button class="btn btn-sm btn-info" onclick="exportMonthCSV()">⬇ 匯出本月 CSV</button>
+    </div>
+    <div id="report-content"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCQmlT_Ie5K1VdcmjqayBv3Ro8G83lWGFk",
+  authDomain: "taiwangsd-01.firebaseapp.com",
+  projectId: "taiwangsd-01",
+  storageBucket: "taiwangsd-01.firebasestorage.app",
+  messagingSenderId: "723231872684",
+  appId: "1:723231872684:web:8c949720e782326dab7109"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const ordersCol = collection(db, "dispatch_orders");
+let unsubscribeOrders = null;
+
+document.getElementById('google-login-btn').addEventListener('click', () => {
+  signInWithPopup(auth, provider).catch(err => alert('登入失敗：' + err.message));
+});
+document.getElementById('logout-btn').addEventListener('click', () => {
+  signOut(auth);
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('main-view').style.display = 'block';
+    document.getElementById('user-info').innerHTML =
+      (user.photoURL ? `<img src="${user.photoURL}">` : '') + (user.displayName || user.email);
+    startListening();
+  } else {
+    if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; }
+    document.getElementById('login-view').style.display = 'flex';
+    document.getElementById('main-view').style.display = 'none';
+  }
+});
+
+let orders = [];
+let editingId = null;
+let extraCount = 0;
+let parsedData = {};
+
+function setSyncStatus(state, msg) {
+  const bar = document.getElementById('sync-status');
+  const dot = bar.querySelector('.dot');
+  const txt = document.getElementById('sync-msg');
+  dot.className = 'dot ' + (state === 'ok' ? 'dot-green' : state === 'error' ? 'dot-red' : 'dot-yellow');
+  txt.textContent = msg;
+}
+
+function startListening() {
+  const q = query(ordersCol, orderBy("createdAt", "desc"));
+  unsubscribeOrders = onSnapshot(q, (snapshot) => {
+    orders = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }));
+    setSyncStatus('ok', '已同步 · ' + orders.length + ' 筆訂單');
+    const activeTab = document.querySelector('.tab.active');
+    if (activeTab) {
+      const tabName = activeTab.textContent.trim();
+      if (tabName.includes('訂單列表')) { populateMonthFilter(); renderList(); }
+      if (tabName.includes('月結')) { populateReportMonth(); renderReport(); }
+    }
+  }, (err) => {
+    setSyncStatus('error', '同步失敗，請檢查網路或權限');
+    console.error(err);
+  });
+}
+
+window.switchTab = function(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'list') { populateMonthFilter(); renderList(); }
+  if (name === 'report') { populateReportMonth(); renderReport(); }
+};
+
+window.addExtraCost = function(label = '', amount = '') {
+  extraCount++;
+  const id = 'ex-' + extraCount;
+  const d = document.createElement('div');
+  d.id = id;
+  d.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px;';
+  d.innerHTML = `<input style="flex:1.5;" type="text" placeholder="費用名稱" value="${label}"><input style="flex:1;" type="number" placeholder="金額" min="0" value="${amount}" oninput="calcTotal()"><button class="btn btn-sm btn-danger" onclick="document.getElementById('${id}').remove();calcTotal()">✕</button>`;
+  document.getElementById('extra-costs').appendChild(d);
+};
+
+function getExtras() {
+  const res = [];
+  document.querySelectorAll('#extra-costs > div').forEach(r => {
+    const ins = r.querySelectorAll('input');
+    const lbl = ins[0].value.trim();
+    const amt = parseFloat(ins[1].value) || 0;
+    if (lbl || amt) res.push({ label: lbl || '其他', amount: amt });
+  });
+  return res;
+}
+
+window.calcTotal = function() {
+  const v = id => parseFloat(document.getElementById(id).value) || 0;
+  const extras = getExtras();
+  const total = v('f-fee') + v('f-fee-from') + v('f-fee-via') + v('f-fee-to') + extras.reduce((s, e) => s + e.amount, 0);
+  document.getElementById('total-display').textContent = 'NT$' + Math.round(total).toLocaleString();
+};
+
+window.clearForm = function() {
+  ['f-date','f-no','f-from','f-to','f-sender','f-sender-tel','f-receiver','f-receiver-tel',
+   'f-items','f-transfer','f-fee','f-fee-from','f-fee-via','f-fee-to',
+   'f-taxid','f-inv-name','f-inv-person','f-inv-addr','f-note'
+  ].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  document.getElementById('f-status').value = 'pending';
+  document.getElementById('extra-costs').innerHTML = '';
+  extraCount = 0; editingId = null;
+  document.getElementById('total-display').textContent = 'NT$0';
+};
+
+const PRESETS = {
+  hb_zh_to_kh: {
+    from: '新竹縣竹北市 華邦電子',
+    to: '高雄市 華邦電子（華東）',
+    sender: '華邦電子（竹北廠）',
+    senderTel: '',
+    receiver: '華邦電子（高雄華東）',
+    receiverTel: '',
+    items: '',
+    fee: 980, feeFrom: 400, feeVia: 470, feeTo: 400,
+    note: '華邦電（竹北→高雄）'
+  },
+  hb_kh_to_zh: {
+    from: '高雄市 華邦電子（華東）',
+    to: '新竹縣竹北市 華邦電子',
+    sender: '華邦電子（高雄華東）',
+    senderTel: '',
+    receiver: '華邦電子（竹北廠）',
+    receiverTel: '',
+    items: '',
+    fee: 980, feeFrom: 400, feeVia: 470, feeTo: 400,
+    note: '華邦電（高雄→竹北）'
+  },
+  hy_doan: {
+    from: '台北市內湖區舊宗路二段171巷17號3樓',
+    to: '830高雄市鳳山區和成路432號',
+    sender: '陳佳瑋',
+    senderTel: '0928-657883',
+    receiver: '朵恩動物醫院',
+    receiverTel: '07-7911517（董育廷 醫師）',
+    items: '檢體（低溫運送）',
+    fee: 910, feeFrom: 350, feeVia: 520, feeTo: 500,
+    note: '華宇藥品朵恩'
+  }
+};
+
+window.quickFill = function(key) {
+  const p = PRESETS[key];
+  if (!p) return;
+  clearForm();
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v ?? ''; };
+  set('f-from', p.from); set('f-to', p.to);
+  set('f-sender', p.sender); set('f-sender-tel', p.senderTel);
+  set('f-receiver', p.receiver); set('f-receiver-tel', p.receiverTel);
+  set('f-items', p.items);
+  set('f-fee', p.fee); set('f-fee-from', p.feeFrom); set('f-fee-via', p.feeVia); set('f-fee-to', p.feeTo);
+  set('f-note', p.note);
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  calcTotal();
+};
+
+
+
+window.saveOrder = async function() {
+  const date = document.getElementById('f-date').value;
+  const from = document.getElementById('f-from').value.trim();
+  const to = document.getElementById('f-to').value.trim();
+  const sender = document.getElementById('f-sender').value.trim();
+  if (!date || !from || !to || !sender) { alert('請填寫日期、收送地址及寄件人'); return; }
+  const fee = parseFloat(document.getElementById('f-fee').value) || 0;
+  const feeFrom = parseFloat(document.getElementById('f-fee-from').value) || 0;
+  const feeVia = parseFloat(document.getElementById('f-fee-via').value) || 0;
+  const feeTo = parseFloat(document.getElementById('f-fee-to').value) || 0;
+  const extras = getExtras();
+  const total = fee + feeFrom + feeVia + feeTo + extras.reduce((s, e) => s + e.amount, 0);
+  const o = {
+    no: document.getElementById('f-no').value.trim() || genId(),
+    date, from, to, sender,
+    senderTel: document.getElementById('f-sender-tel').value.trim(),
+    receiver: document.getElementById('f-receiver').value.trim(),
+    receiverTel: document.getElementById('f-receiver-tel').value.trim(),
+    items: document.getElementById('f-items').value.trim(),
+    transfer: document.getElementById('f-transfer').value.trim(),
+    fee, feeFrom, feeVia, feeTo, extras, total,
+    taxId: document.getElementById('f-taxid').value.trim(),
+    invName: document.getElementById('f-inv-name').value.trim(),
+    invPerson: document.getElementById('f-inv-person').value.trim(),
+    invAddr: document.getElementById('f-inv-addr').value.trim(),
+    status: document.getElementById('f-status').value,
+    note: document.getElementById('f-note').value.trim(),
+    createdAt: editingId ? (orders.find(x => x._docId === editingId) || {}).createdAt || Date.now() : Date.now()
+  };
+  try {
+    setSyncStatus('yellow', '儲存中...');
+    if (editingId) {
+      await updateDoc(doc(db, "dispatch_orders", editingId), o);
+    } else {
+      await addDoc(ordersCol, o);
+    }
+    clearForm();
+    alert('訂單已儲存！');
+  } catch (e) {
+    setSyncStatus('error', '儲存失敗');
+    alert('儲存失敗：' + e.message);
+  }
+};
+
+window.deleteOrder = async function(docId) {
+  if (!confirm('確定刪除？')) return;
+  try {
+    await deleteDoc(doc(db, "dispatch_orders", docId));
+  } catch (e) { alert('刪除失敗：' + e.message); }
+};
+
+window.editOrder = function(docId) {
+  const o = orders.find(x => x._docId === docId); if (!o) return;
+  editingId = docId;
+  const set = (fid, v) => { const e = document.getElementById(fid); if (e) e.value = v || ''; };
+  set('f-date', o.date); set('f-no', o.no); set('f-from', o.from); set('f-to', o.to);
+  set('f-sender', o.sender); set('f-sender-tel', o.senderTel);
+  set('f-receiver', o.receiver); set('f-receiver-tel', o.receiverTel);
+  set('f-items', o.items); set('f-transfer', o.transfer);
+  set('f-fee', o.fee); set('f-fee-from', o.feeFrom); set('f-fee-via', o.feeVia); set('f-fee-to', o.feeTo);
+  set('f-taxid', o.taxId); set('f-inv-name', o.invName); set('f-inv-person', o.invPerson); set('f-inv-addr', o.invAddr);
+  set('f-status', o.status); set('f-note', o.note);
+  document.getElementById('extra-costs').innerHTML = ''; extraCount = 0;
+  (o.extras || []).forEach(e => addExtraCost(e.label, e.amount));
+  calcTotal();
+  document.querySelectorAll('.tab')[1].click();
+};
+
+window.cycleStatus = async function(docId) {
+  const o = orders.find(x => x._docId === docId); if (!o) return;
+  const cycle = { pending: 'transferred', transferred: 'done', done: 'pending' };
+  try {
+    await updateDoc(doc(db, "dispatch_orders", docId), { status: cycle[o.status] || 'pending' });
+  } catch (e) { alert('更新失敗：' + e.message); }
+};
+
+function fmtMoney(n) { return 'NT$' + Math.round(n).toLocaleString(); }
+function fmtStatus(s) { return s === 'done' ? '已收款' : s === 'transferred' ? '已轉帳' : '待確認'; }
+function badgeClass(s) { return s === 'done' ? 'badge-done' : s === 'transferred' ? 'badge-transferred' : 'badge-pending'; }
+
+function getMonths() {
+  const s = new Set();
+  orders.forEach(o => { if (o.date) s.add(o.date.substring(0, 7)); });
+  return Array.from(s).sort().reverse();
+}
+
+function populateMonthFilter() {
+  const sel = document.getElementById('filter-month');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部月份</option>';
+  getMonths().forEach(m => { const op = document.createElement('option'); op.value = m; op.textContent = m; if (m === cur) op.selected = true; sel.appendChild(op); });
+}
+
+function populateReportMonth() {
+  const sel = document.getElementById('report-month');
+  sel.innerHTML = '';
+  const ms = getMonths();
+  if (!ms.length) { sel.innerHTML = '<option value="">（無資料）</option>'; return; }
+  ms.forEach(m => { const op = document.createElement('option'); op.value = m; op.textContent = m; sel.appendChild(op); });
+}
+
+window.renderList = function() {
+  const q2 = (document.getElementById('search').value || '').toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const mo = document.getElementById('filter-month').value;
+  let list = orders.filter(o => {
+    if (st && o.status !== st) return false;
+    if (mo && (!o.date || !o.date.startsWith(mo))) return false;
+    if (q2) { const hay = [o.no, o.from, o.to, o.sender, o.receiver, o.items, o.note, o.transfer].join(' ').toLowerCase(); if (!hay.includes(q2)) return false; }
+    return true;
+  });
+  const el = document.getElementById('order-list');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">📭 沒有符合的訂單</div>'; return; }
+  el.innerHTML = list.map(o => `
+    <div class="order-row">
+      <div class="order-header">
+        <span style="font-size:13px;font-weight:600;">${o.no}</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <span class="badge ${badgeClass(o.status)}">${fmtStatus(o.status)}</span>
+          ${o.transfer ? `<span class="badge" style="background:#f5f5f5;color:#666;">末四碼 ${o.transfer}</span>` : ''}
+          ${o.taxId ? `<span class="badge badge-inv">統編</span>` : ''}
+        </div>
+      </div>
+      <div class="order-meta">
+        <span>📅 ${o.date}</span>
+        <span>📍 ${o.from} → ${o.to}</span>
+        <span>👤 ${o.sender}${o.senderTel ? ' · ' + o.senderTel : ''}</span>
+        ${o.receiver ? `<span>📬 ${o.receiver}${o.receiverTel ? ' · ' + o.receiverTel : ''}</span>` : ''}
+      </div>
+      ${o.items ? `<div style="font-size:12px;color:#888;margin-bottom:5px;">${o.items}</div>` : ''}
+      <div style="font-size:16px;font-weight:700;">${fmtMoney(o.total)}</div>
+      ${o.note ? `<div style="font-size:12px;color:#888;margin-top:3px;">備註：${o.note}</div>` : ''}
+      <div class="order-actions">
+        <button class="btn btn-sm" onclick="editOrder('${o._docId}')">✏️ 編輯</button>
+        <button class="btn btn-sm" onclick="cycleStatus('${o._docId}')">🔄 更新狀態</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteOrder('${o._docId}')">🗑</button>
+      </div>
+    </div>`).join('');
+};
+
+window.renderReport = function() {
+  const mo = document.getElementById('report-month').value;
+  const el = document.getElementById('report-content');
+  if (!mo) { el.innerHTML = '<div class="empty-state">請選擇月份</div>'; return; }
+  const list = orders.filter(o => o.date && o.date.startsWith(mo));
+  if (!list.length) { el.innerHTML = '<div class="empty-state">本月無訂單</div>'; return; }
+  const sum = k => list.reduce((s, o) => s + (o[k] || 0), 0);
+  const tTotal = list.reduce((s, o) => s + o.total, 0);
+  const tDone = list.filter(o => o.status === 'done').reduce((s, o) => s + o.total, 0);
+  const tPending = list.filter(o => o.status !== 'done').reduce((s, o) => s + o.total, 0);
+  const tExtra = list.reduce((s, o) => s + (o.extras || []).reduce((a, e) => a + e.amount, 0), 0);
+  el.innerHTML = `
+    <div class="summary-grid">
+      <div class="metric"><div class="metric-label">訂單數</div><div class="metric-val">${list.length}</div></div>
+      <div class="metric"><div class="metric-label">總金額</div><div class="metric-val">${fmtMoney(tTotal)}</div></div>
+      <div class="metric"><div class="metric-label">已收款</div><div class="metric-val" style="color:#059669">${fmtMoney(tDone)}</div></div>
+      <div class="metric"><div class="metric-label">未收款</div><div class="metric-val" style="color:#d97706">${fmtMoney(tPending)}</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">💰 費用明細合計</div>
+      <div class="total-line"><span style="color:#888;">配送金額</span><span>${fmtMoney(sum('fee'))}</span></div>
+      <div class="total-line"><span style="color:#888;">起點運費</span><span>${fmtMoney(sum('feeFrom'))}</span></div>
+      <div class="total-line"><span style="color:#888;">中轉站運費</span><span>${fmtMoney(sum('feeVia'))}</span></div>
+      <div class="total-line"><span style="color:#888;">迄點運費</span><span>${fmtMoney(sum('feeTo'))}</span></div>
+      <div class="total-line"><span style="color:#888;">其他費用</span><span>${fmtMoney(tExtra)}</span></div>
+      <div class="total-line grand"><span>合計</span><span>${fmtMoney(tTotal)}</span></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">📋 ${mo} 訂單明細</div>
+      ${list.map(o => `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-top:1px solid #f0f0f0;font-size:13px;gap:8px;">
+          <div style="min-width:0;">
+            <span style="font-weight:600;">${o.no}</span>
+            <span style="color:#888;margin-left:8px;">${o.date}</span><br>
+            <span style="color:#888;">${o.from} → ${o.to}</span><br>
+            <span style="color:#888;">${o.sender}${o.senderTel ? ' · ' + o.senderTel : ''}${o.transfer ? ' · 末四碼 ' + o.transfer : ''}</span>
+            ${o.taxId ? `<span class="badge badge-inv" style="margin-left:4px;">統編 ${o.taxId}</span>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:700;">${fmtMoney(o.total)}</div>
+            <span class="badge ${badgeClass(o.status)}">${fmtStatus(o.status)}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+};
+
+function buildCSV(list) {
+  const h = ['訂單編號','日期','收件地址（起點）','送件地址（迄點）','寄件人','寄件人電話','收件人','收件人電話','物品內容','轉帳末四碼','配送金額','起點運費','中轉站運費','迄點運費','其他費用','合計','付款狀態','發票統編','發票抬頭','發票收件人','發票地址','備註'];
+  const rows = list.map(o => [
+    o.no, o.date, o.from, o.to, o.sender, o.senderTel || '', o.receiver || '', o.receiverTel || '',
+    o.items || '', o.transfer || '', o.fee, o.feeFrom, o.feeVia, o.feeTo,
+    (o.extras || []).map(e => e.label + ':' + e.amount).join('；'),
+    o.total, fmtStatus(o.status),
+    o.taxId || '', o.invName || '', o.invPerson || '', o.invAddr || '', o.note || ''
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`));
+  return '\uFEFF' + [h.map(x => `"${x}"`), ...rows].map(r => r.join(',')).join('\n');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.exportCSV = function() {
+  const q2 = (document.getElementById('search').value || '').toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const mo = document.getElementById('filter-month').value;
+  let list = orders.filter(o => {
+    if (st && o.status !== st) return false;
+    if (mo && (!o.date || !o.date.startsWith(mo))) return false;
+    if (q2) { const hay = [o.no, o.from, o.to, o.sender, o.receiver, o.items, o.transfer].join(' ').toLowerCase(); if (!hay.includes(q2)) return false; }
+    return true;
+  });
+  if (!list.length) { alert('目前沒有符合條件的訂單'); return; }
+  downloadCSV(buildCSV(list), '派車記帳_' + (mo || '全部') + '_' + new Date().toISOString().slice(0, 10) + '.csv');
+};
+
+window.exportMonthCSV = function() {
+  const mo = document.getElementById('report-month').value;
+  if (!mo) { alert('請先選擇月份'); return; }
+  const list = orders.filter(o => o.date && o.date.startsWith(mo));
+  if (!list.length) { alert('本月無訂單'); return; }
+  downloadCSV(buildCSV(list), '派車記帳_' + mo + '.csv');
+};
+
+window.parseLine = function() {
+  const text = document.getElementById('line-text').value;
+  if (!text.trim()) { alert('請貼入訊息內容'); return; }
+  const lines = text.split('\n').map(l => l.trim());
+  let sections = { pickup: {}, delivery: {}, invoice: {} };
+  let currentSection = '';
+  const warnings = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.includes('我們去收件地址')) { currentSection = 'pickup'; continue; }
+    if (l.includes('我們送件到達地址')) { currentSection = 'delivery'; continue; }
+    if (l.includes('物品內容')) { currentSection = 'items'; continue; }
+    if (l.includes('轉帳帳號後四碼')) { currentSection = 'transfer'; continue; }
+    if (l.includes('發票資訊') || l.includes('發票統編')) { currentSection = 'invoice'; }
+    if (l.includes('銀行：') || l.includes('銀行:')) { currentSection = 'bank'; continue; }
+    if (l.match(/^-{3,}/)) continue;
+    if (l && currentSection) {
+      const kv = l.match(/^(.+?)\s*[:：]\s*(.*)$/);
+      if (kv) {
+        const key = kv[1].trim(); const val = kv[2].trim();
+        if (currentSection === 'pickup') {
+          if (key === '姓名') sections.pickup.name = val;
+          else if (key === '電話') sections.pickup.tel = val;
+          else if (!sections.pickup.addr && val) sections.pickup.addr = val;
+        } else if (currentSection === 'delivery') {
+          if (key === '姓名') sections.delivery.name = val;
+          else if (key === '電話') sections.delivery.tel = val;
+          else if (!sections.delivery.addr && val) sections.delivery.addr = val;
+        } else if (currentSection === 'items' && !sections.items && val) {
+          sections.items = val;
+        } else if (currentSection === 'transfer' && !sections.transfer && val) {
+          sections.transfer = val;
+        } else if (currentSection === 'invoice') {
+          if (key === '發票統編') sections.invoice.taxId = val;
+          else if (key === '發票抬頭') sections.invoice.name = val;
+          else if (key === '發票地址') sections.invoice.addr = val;
+          else if (key === '發票收件人') sections.invoice.person = val;
+        }
+      } else {
+        if (currentSection === 'pickup' && !sections.pickup.addr && l) sections.pickup.addr = l;
+        else if (currentSection === 'delivery' && !sections.delivery.addr && l) sections.delivery.addr = l;
+        else if (currentSection === 'items' && !sections.items && l) sections.items = l;
+        else if (currentSection === 'transfer' && !sections.transfer && l) sections.transfer = l;
+      }
+    }
+  }
+
+  parsedData = {
+    from: sections.pickup.addr || '',
+    senderName: sections.pickup.name || '',
+    senderTel: sections.pickup.tel || '',
+    to: sections.delivery.addr || '',
+    receiverName: sections.delivery.name || '',
+    receiverTel: sections.delivery.tel || '',
+    items: sections.items || '',
+    transfer: sections.transfer || '',
+    taxId: sections.invoice.taxId || '',
+    invName: sections.invoice.name || '',
+    invAddr: sections.invoice.addr || '',
+    invPerson: sections.invoice.person || '',
+  };
+
+  if (!parsedData.from) warnings.push('未填收件地址');
+  if (!parsedData.senderName) warnings.push('未填寄件人姓名');
+  if (!parsedData.to) warnings.push('未填送件地址');
+  if (!parsedData.receiverName) warnings.push('未填收件人姓名');
+  if (!parsedData.transfer) warnings.push('未填轉帳帳號後四碼（可能尚未轉帳）');
+
+  const rows = [
+    ['收件地址（起點）', parsedData.from], ['寄件人', parsedData.senderName], ['寄件人電話', parsedData.senderTel],
+    ['送件地址（迄點）', parsedData.to], ['收件人', parsedData.receiverName], ['收件人電話', parsedData.receiverTel],
+    ['物品內容', parsedData.items], ['轉帳末四碼', parsedData.transfer],
+    ['發票統編', parsedData.taxId], ['發票抬頭', parsedData.invName],
+    ['發票收件人', parsedData.invPerson], ['發票地址', parsedData.invAddr],
+  ];
+
+  document.getElementById('preview-content').innerHTML = rows.map(([k, v]) => `
+    <div class="preview-row">
+      <span class="preview-key">${k}</span>
+      <span class="preview-val ${v ? '' : 'empty'}">${v || '（未填）'}</span>
+    </div>`).join('');
+
+  const warnEl = document.getElementById('parse-warn');
+  if (warnings.length) {
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = '⚠️ 注意：' + warnings.join('、');
+  } else {
+    warnEl.style.display = 'none';
+  }
+  document.getElementById('parse-preview').style.display = 'block';
+};
+
+window.applyParsed = function() {
+  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v || ''; };
+  set('f-from', parsedData.from); set('f-sender', parsedData.senderName); set('f-sender-tel', parsedData.senderTel);
+  set('f-to', parsedData.to); set('f-receiver', parsedData.receiverName); set('f-receiver-tel', parsedData.receiverTel);
+  set('f-items', parsedData.items); set('f-transfer', parsedData.transfer);
+  set('f-taxid', parsedData.taxId); set('f-inv-name', parsedData.invName);
+  set('f-inv-person', parsedData.invPerson); set('f-inv-addr', parsedData.invAddr);
+  set('f-date', new Date().toISOString().split('T')[0]);
+  if (parsedData.transfer) document.getElementById('f-status').value = 'transferred';
+  calcTotal();
+  document.querySelectorAll('.tab')[1].click();
+};
+
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
